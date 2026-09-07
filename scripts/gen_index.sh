@@ -37,3 +37,4 @@ ROOT="${1:?need archive root dir}"
 } > "${ROOT}/index.html"
 
 echo "index.html updated: ${ROOT}/index.html"
+
