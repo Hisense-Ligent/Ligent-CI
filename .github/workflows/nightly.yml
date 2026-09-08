@@ -1,32 +1,20 @@
-# =====================================================================
-# .github/workflows/nightly.yml
-# SONiC-MGMT nightly automated test workflow
-# =====================================================================
 name: sonic-mgmt-nightly
-
 on:
   schedule:
-    # GitHub Actions cron uses UTC. Beijing 19:00 == UTC 11:00
     - cron: "0 11 * * *"
-  workflow_dispatch:        # manual trigger button on the Actions page
-
+  workflow_dispatch:
 concurrency:
-  group: nightly-cicd       # only one run at a time to avoid contending the lab DUT
+  group: nightly-cicd
   cancel-in-progress: false
-
 jobs:
   nightly:
     runs-on: [self-hosted, sonic-lab]
     timeout-minutes: 120
     steps:
-      - name: Checkout CI scripts
-        uses: actions/checkout@v4
-
       - name: Run nightly transceiver DOM tests
         env:
           GHA_RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        run: bash scripts/run_nightly.sh
-
+        run: bash /home/user/ci-scripts/run_nightly.sh
       - name: Print report location
         if: always()
-        run: echo "Report portal http://172.16.237.92:8081/  Today http://172.16.237.92:8081/$(date +%F)/"
+        run: echo "Report http://172.16.237.92:8081/$(date +%F)/"
