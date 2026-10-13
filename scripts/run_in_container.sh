@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # =====================================================================
 # run_in_container.sh -- Main flow inside the sonic-mgmt container
@@ -87,6 +86,46 @@ cd "${CI_REPO}/tests"
   -e "--skip_sanity --disable_loganalyzer --disable_memory_utilization --alluredir=${RESULTS_DIR}"
 TEST_RC=$?
 echo "[5] test exit code=${TEST_RC}"
+
+# ---- Step 5b: CDB firmware tests, Ethernet96 only (LMS3821S-PC5) ----
+# Port selection comes from inventory (cdb_firmware_upgrade.json defaults:
+# ports_under_test=[13]); CDB_PORT here is only used for prep/post-check.
+# Positive cases really flash the module; the package fixture restores
+# Active 1.0.0 / Inactive 255.0.0 afterwards.
+# Prerequisites (not managed here): bins under /host/cmis_cdb_firmware/,
+# DUT shims (sfputil wrapper, cmisCDB abort shim, dom CLI plugin).
+# Set RUN_CDB=0 to disable.
+RUN_CDB=1
+CDB_PORT="Ethernet96"
+CDB_ALIAS="Eth13"
+if [ "${RUN_CDB}" = "1" ]; then
+  echo "[5b] prepare ${CDB_PORT}: clear alias parentheses, enable dom_polling ..."
+  cd "${CI_REPO}/ansible"
+  ansible -m shell -i lab "${DUT}" \
+    -a "sonic-db-cli CONFIG_DB hset 'PORT|${CDB_PORT}' alias '${CDB_ALIAS}'" -b
+  ansible -m shell -i lab "${DUT}" \
+    -a "sonic-db-cli CONFIG_DB hset 'PORT|${CDB_PORT}' dom_polling enabled" -b
+  sleep 60   # let xcvrd complete one DOM polling cycle
+
+  echo "[5b] run transceiver/cdb_firmware_upgrade/ ..."
+  cd "${CI_REPO}/tests"
+  ./run_tests.sh \
+    -n "${TB_NAME}" \
+    -d "${DUT}" \
+    -f "${CI_REPO}/ansible/testbed.yaml" \
+    -i ../ansible/lab \
+    -t "${TOPO}" \
+    -u \
+    -c transceiver/cdb_firmware_upgrade/ \
+    -e "--skip_sanity --disable_loganalyzer --disable_memory_utilization --alluredir=${RESULTS_DIR}"
+  CDB_RC=$?
+  echo "[5b] CDB test exit code=${CDB_RC}"
+
+  # Make a failed restore visible in the CI log.
+  echo "[5b] post-run firmware state (expect Active 1.0.0 / Inactive 255.0.0) ..."
+  cd "${CI_REPO}/ansible"
+  ansible -m shell -i lab "${DUT}" -a "sfputil show fwversion ${CDB_PORT}" -b
+fi
 
 # ---- Step 6: allure generate (--single-file guarantees index.html) ----
 echo "[6] allure generate ..."
