@@ -1,20 +1,24 @@
 name: sonic-mgmt-nightly
+
 on:
   schedule:
     - cron: "0 11 * * *"
   workflow_dispatch:
+
 concurrency:
   group: nightly-cicd
   cancel-in-progress: false
+
 jobs:
   nightly:
     runs-on: [self-hosted, sonic-lab]
-    timeout-minutes: 120
+    timeout-minutes: 360
     steps:
       - name: Run nightly transceiver DOM tests
         env:
           GHA_RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: bash /home/user/ci-scripts/run_nightly.sh
+
       - name: Print report location
         if: always()
         run: echo "Report http://172.16.237.92:8081/$(date +%F)/"
