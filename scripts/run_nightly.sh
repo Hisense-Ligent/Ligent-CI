@@ -48,8 +48,10 @@ fi
 # ---- Step 2: sync container scripts into bind-mount dir ----
 echo "[2] sync container scripts to ${HOST_CI_SCRIPTS} ..."
 mkdir -p "${HOST_CI_SCRIPTS}"
-# GITHUB_WORKSPACE is the checked-out repo path under GHA; fall back to script dir for manual runs
-SRC_DIR="${GITHUB_WORKSPACE:-$(cd "$(dirname "$0")" && pwd)}"
+# The workflow has no checkout step and calls /home/user/ci-scripts/run_nightly.sh
+# directly, so use this script's own dir. Using GITHUB_WORKSPACE here would pick
+# up a stale checkout left in the runner workspace and overwrite ci-scripts.
+SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Locate the two helper scripts wherever they live in the repo: they may sit at
 # the repo root (next to run_nightly.sh) or under a scripts/ subdir. Search both.
 find_script() {
